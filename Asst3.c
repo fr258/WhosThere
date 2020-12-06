@@ -229,7 +229,7 @@ int readIn(int fd, int key)
 	}
 	else
 	{	
-		for(int i = 0; i < 5 && (bytes =  read(fd, buffHead, BUFFSIZE)!=0 ; i++)
+		for(int i = 0; i < 5 && (bytes =  read(fd, buffHead, BUFFSIZE)==0 ; i++)
 		{
 			sleep(5);
 		}
