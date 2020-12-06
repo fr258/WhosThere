@@ -233,7 +233,7 @@ int readIn(int fd, int key)
 		{
 			sleep(5);
 		}
-		if(bytes = 0) //nothing read in after 25 seconds
+		if(bytes == 0) //nothing read in after 25 seconds
 		{
 			return EXIT_FAILURE;
 		}
