@@ -220,7 +220,7 @@ char* substring(char *out, const char *in, int startIndex, int length)
 
 int checkFormat(char* input)
 {
-    char* type = malloc(3*sizeof(char));
+    char* type = malloc(4);
     if(strlen(input)<3)
         return 1;
     substring(type, input, 0, 3);
@@ -434,11 +434,9 @@ int readIn(int fd, int key)
 	}
 	else
 	{	
-		for(int i = 0; i < 5 && (bytes =  read(fd, buffHead, BUFFSIZE))!=0 ; i++)
-		{
-			sleep(5);
-		}
-		if(bytes = 0) //nothing read in after 25 seconds
+		bytes =  read(fd, buffHead, BUFFSIZE);
+
+		if(bytes == 0) //nothing read in
 		{
 			return EXIT_FAILURE;
 		}
