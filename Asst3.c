@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <ctype.h>
 
 
 #define BACKLOG 5
@@ -114,6 +115,8 @@ int server(char *port)
 		//COMMENCE KNOCK KNOCK
 		
 		//knock knock
+        char* kkj1 = {"Knock, knock."};
+        write(sfd, kkj1, sizeof(kkj1)); 
 	
 		if(readIn(sfd,1)) //who's there?
 		{
@@ -122,6 +125,8 @@ int server(char *port)
 		}
 		
 		//setup
+        char* kkj2 = {"Incompetent interrupting cow."};
+        write(sfd, kkj2, sizeof(kkj2));
 		
 		if(readIn(sfd,3)) //setup, who?
 		{
@@ -130,6 +135,8 @@ int server(char *port)
 		}
 			
 		//punchline
+        char* kkj3 = {"...Moo!"};
+        write(sfd, kkj3, sizeof(kkj3));
 		
 		if(readIn(sfd,5)) //surprise/disgust
 		{
@@ -138,7 +145,6 @@ int server(char *port)
 		}
 			
 		close(sfd);
-		
     }
 
     return 0;
@@ -199,9 +205,208 @@ void add(Node* head, char* data)
     head->next = NULL;
 }
 
-int checkValid(int fd, char* input, int key)
+char* substring(char *out, const char *in, int startIndex, int length)
 {
-	return EXIT_SUCCESS;
+    while (length > 0)
+    {
+        *out = *(in + startIndex);
+        out++;
+        in++;
+        length--;
+    }
+    *out = '\0';
+    return out;
+}
+
+int checkFormat(char* input)
+{
+    char* type = malloc(3*sizeof(char));
+    if(strlen(input)<3)
+        return 1;
+    substring(type, input, 0, 3);
+    if(strcmp(type, "REG")!=0 && strcmp(type, "ERR")!=0)
+    {
+        return 1;
+    }
+    else if(strcmp(type, "REG")==0)
+    {
+        if(input[3]!='|')
+        {
+            return 1;
+        }
+        else 
+        {
+            int numCount = 0;
+            int index = 4;
+            while(isdigit(input[index]))
+            {
+                numCount++;
+                index++;
+            }
+            if(numCount==0)
+            {
+                return 1;
+            }
+            else
+            {
+                if(input[index]!='|')
+                {
+                    return 1;
+                }
+                else
+                {
+                    if(input[strlen(input)-1]!='|')
+                    {
+                        return 1;
+                    }
+                    else
+                    {
+                        return 0;
+                    }
+                    
+                }
+            }
+        }
+    }
+    return -1;
+}
+
+int checkContent(char* input, char* correct)
+{
+    int index = 0;
+    while(!isdigit(input[index]))
+    {
+        index++;
+    }
+    int count = 0;
+    int tempIndex = index;
+    while(isdigit(input[index]))
+    {
+        count++;
+        index++;
+    }
+    char* longth = malloc(100*sizeof(char));
+    substring(longth, input, tempIndex, tempIndex+count);
+    int length = atoi(longth);
+    index++;
+
+    char* content = malloc(1000*sizeof(char));
+    substring(content, input, index, length);
+    
+    return (strcmp(content, correct)==0);
+
+}
+
+int checkLen(char* input)
+{
+    int index = 0;
+    while(!isdigit(input[index]))
+    {
+        index++;
+    }
+    int count = 0;
+    int tempIndex = index;
+    while(isdigit(input[index]))
+    {
+        count++;
+        index++;
+    }
+    char* longth = malloc(100*sizeof(char));
+    substring(longth, input, tempIndex, tempIndex+count);
+    int length = atoi(longth);
+    index++;
+    count = 0;
+    while(input[index]!='|')
+    {
+        count++;
+        index++;
+    }
+    return length==count;
+}
+
+int checkValid(int sfd, char* input, int key)
+{
+    if(key==1)
+    {
+        if(!checkFormat(input))
+        {
+            if(checkFormat(input)==-1)
+            {
+                //error message received, what do
+                return -1;
+            }
+            char* err1 = {"ERR|M1FT|"};
+            write(sfd, err1, sizeof(err1));
+            return 0;
+        }
+        if(!checkLen(input))
+        {
+            char* err1 = {"ERR|M1LN|"};
+            write(sfd, err1, sizeof(err1));
+            return 0;
+        }
+        if(!checkContent(input, "Who's there?"))
+        {
+            char* err1 = {"ERR|M1CT|"};
+            write(sfd, err1, sizeof(err1));
+            return 0;
+        }
+
+    }
+    else if(key==3)
+    {
+        if(!checkFormat(input))
+        {
+            if(checkFormat(input)==-1)
+            {
+                //error message received, what do
+                return -1;
+            }
+            char* err3 = {"ERR|M3FT|"};
+            write(sfd, err3, sizeof(err3));
+            return 0;
+        }
+        if(!checkLen(input))
+        {
+            char* err3 = {"ERR|M1LN|"};
+            write(sfd, err3, sizeof(err3));
+            return 0;
+        }
+        if(!checkContent(input, "Incompetent interrupting cow, who?"))
+        {
+            char* err3 = {"ERR|M3CT|"};
+            write(sfd, err3, sizeof(err3));
+            return 0;
+        }
+    }
+    else if(key==5)
+    {
+        if(!checkFormat(input))
+        {
+            if(checkFormat(input)==-1)
+            {
+                //error message received, what do
+                return -1;
+            }
+            char* err5 = {"ERR|M5FT|"};
+            write(sfd, err5, sizeof(err5));
+            return 0;
+        }
+        if(!checkLen(input))
+        {
+            char* err5 = {"ERR|M1LN|"};
+            write(sfd, err5, sizeof(err5));
+            return 0;
+        }
+        if(!ispunct(input[strlen(input)-2]))
+        {
+            char* err5 = {"ERR|M1CT|"};
+            write(sfd, err5, sizeof(err5));
+            return 0;
+        }
+    }
+    
+	return 1;
 }
 
 char* combine(Node* current, int count)
@@ -229,11 +434,11 @@ int readIn(int fd, int key)
 	}
 	else
 	{	
-		for(int i = 0; i < 5 && (bytes =  read(fd, buffHead, BUFFSIZE)==0 ; i++)
+		for(int i = 0; i < 5 && (bytes =  read(fd, buffHead, BUFFSIZE))!=0 ; i++)
 		{
 			sleep(5);
 		}
-		if(bytes == 0) //nothing read in after 25 seconds
+		if(bytes = 0) //nothing read in after 25 seconds
 		{
 			return EXIT_FAILURE;
 		}
@@ -272,28 +477,3 @@ int readIn(int fd, int key)
 	return exitStatus;
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
