@@ -10,12 +10,6 @@
 #define BACKLOG 5
 #define BUFFSIZE 1
 
-// the argument we will pass to the connection-handler threads
-struct connection {
-    struct sockaddr_storage addr;
-    socklen_t addr_len;
-    int fd;
-};
 
 typedef struct listNode
 {
@@ -32,9 +26,9 @@ typedef struct
 	
 } Iterator;
 
-void *echo(void *arg);
+void *helper(void* sfd);
 int server(char *port);
-int joke(int sfd);
+void joke(int sfd);
 int checkValid(int fd, char* input, int key);
 int readIn(int fd, int key);
 char* combine(Node* current, int count);
@@ -59,8 +53,7 @@ int main(int argc, char **argv)
 int server(char *port)
 {
     struct addrinfo hint, *address_list, *addr;
-    struct connection *con;
-    int error, sfd;
+    int error, sfd, fd;
     pthread_t tid;
 
     // initialize hints
@@ -109,39 +102,26 @@ int server(char *port)
 
     // at this point sfd is bound and listening
     printf("Waiting for connection\n");
-    for (;;) {
-    	// create argument struct for child thread
-		con = malloc(sizeof(struct connection));
-        con->addr_len = sizeof(struct sockaddr_storage);
-        	// addr_len is a read/write parameter to accept
-        	// we set the initial value, saying how much space is available
-        	// after the call to accept, this field will contain the actual address length
-        
+    for (;;) {        
         // wait for an incoming connection
-        con->fd = accept(sfd, (struct sockaddr *) &con->addr, &con->addr_len);
-        	// we provide
-        	// sfd - the listening socket
-        	// &con->addr - a location to write the address of the remote host
-        	// &con->addr_len - a location to write the length of the address
-        	//
+        fd = accept(sfd, NULL, NULL);
         	// accept will block until a remote host tries to connect
         	// it returns a new socket that can be used to communicate with the remote
         	// host, and writes the address of the remote hist into the provided location
         
         // if we got back -1, it means something went wrong
-        if (con->fd == -1) {
+        if (fd == -1) {
             perror("accept");
             continue;
         }
 
 		// spin off a worker thread to handle the remote connection
-        error = pthread_create(&tid, NULL, echo, con);
+        error = pthread_create(&tid, NULL, helper, &fd);
 
 		// if we couldn't spin off the thread, clean up and wait for another connection
         if (error != 0) {
             fprintf(stderr, "Unable to create thread: %d\n", error);
-            close(con->fd);
-            free(con);
+            close(sfd);
             continue;
         }
 
@@ -469,8 +449,6 @@ int readIn(int fd, int key)
 			buffHead = malloc(BUFFSIZE+1);
 			count++;
 
-
-			
 		}
 
 
@@ -485,73 +463,38 @@ int readIn(int fd, int key)
 	return exitStatus;
 
 }
-void *echo(void *arg)
+void* helper(void* input)
 {
-    struct connection *c = (struct connection *) arg;
-
-	// find out the name and port of the remote host
-   /* error = getnameinfo((struct sockaddr *) &c->addr, c->addr_len, host, 100, port, 10, NI_NUMERICSERV);
-    	// we provide:
-    	// the address and its length
-    	// a buffer to write the host name, and its length
-    	// a buffer to write the port (as a string), and its length
-    	// flags, in this case saying that we want the port as a number, not a service name
-    if (error != 0) {
-        fprintf(stderr, "getnameinfo: %s", gai_strerror(error));
-        close(c->fd);
-        return NULL;
-    }
-
-    printf("[%s:%s] connection\n", host, port);*/
-
-    /*while ((nread = read(c->fd, buf, 100)) > 0) {
-        buf[nread] = '\0';
-        printf("[%s:%s] read %d bytes |%s|\n", host, port, nread, buf);
-    }
-
-    printf("[%s:%s] got EOF\n", host, port);
-
-    close(c->fd);
-    free(c);
-    return NULL;*/
-	joke(c->fd);
-	close(c->fd);
-    free(c);
-	
+	int sfd = *(int*)input;
+	joke(sfd);
+	close(sfd);
 	return NULL;
-	
-	
 }
-int joke(int sfd)
+void joke(int sfd)
 {
-	    char* kkj1 = {"REG|13|Knock, knock.|"};
-        write(sfd, kkj1, strlen(kkj1)); 
+	char* kkj1 = {"REG|13|Knock, knock.|"};
+	write(sfd, kkj1, strlen(kkj1)); 
+
+	if(!readIn(sfd,1)) //who's there?
+	{
+		return;
+	}
 	
-		if(!readIn(sfd,1)) //who's there?
-		{
-			//close(sfd); //was invalid
-			return 0;
-		}
+	 //setup
+	char* kkj2 = {"REG|29|Incompetent interrupting cow.|"};
+	write(sfd, kkj2, strlen(kkj2));
+	
+	if(!readIn(sfd,3)) //setup, who?
+	{
+		return;
+	}
 		
-		 //setup
-        char* kkj2 = {"REG|29|Incompetent interrupting cow.|"};
-        write(sfd, kkj2, strlen(kkj2));
-		
-		if(!readIn(sfd,3)) //setup, who?
-		{
-			//close(sfd); //was invalid
-			return 0;
-		}
-			
-		//punchline
-        char* kkj3 = {"REG|7|...Moo!|"};
-        write(sfd, kkj3, strlen(kkj3));
-		
-		if(!readIn(sfd,5)) //surprise/disgust
-		{
-			//close(sfd); //was invalid
-			return 0;
-		}		
-		//close(sfd);
-		return 0;
+	//punchline
+	char* kkj3 = {"REG|7|...Moo!|"};
+	write(sfd, kkj3, strlen(kkj3));
+	
+	if(!readIn(sfd,5)) //surprise/disgust
+	{
+		return;
+	}		
 }
