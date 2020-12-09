@@ -13,7 +13,7 @@
 
 typedef struct listNode
 {
-    char* data;
+    char data;
     struct listNode *next;
 	
 } Node;
@@ -26,7 +26,7 @@ void joke(int sfd);
 int checkValid(int fd, char* input, int key);
 int readIn(int fd, int key);
 char* combine(Node* current, int count);
-void add(Node* head, char* data);
+void add(Node* head, char data);
 
 
 
@@ -96,6 +96,7 @@ int server(char *port)
     printf("Waiting for connection\n");
     for (;;) {        
         // wait for an incoming connection
+		//printf("Waiting for connection\n");
         fd = accept(sfd, NULL, NULL);
         	// accept will block until a remote host tries to connect
         	// it returns a new socket that can be used to communicate with the remote
@@ -113,7 +114,7 @@ int server(char *port)
 		// if we couldn't spin off the thread, clean up and wait for another connection
         if (error != 0) {
             fprintf(stderr, "Unable to create thread: %d\n", error);
-            close(sfd);
+            close(fd);
             continue;
         }
 
@@ -125,9 +126,9 @@ int server(char *port)
 }
 
 
-void add(Node* head, char* data)
+void add(Node* head, char data)
 {
-	if(head->data != NULL) 
+	if(head->data != 0) 
 	{
 		while(head->next != NULL)
 		{
@@ -159,7 +160,8 @@ char* substring(char *out, const char *in, int startIndex, int length)
 
 int checkFormat(char* input)
 {
-    char* type = malloc(4);
+    char type[4];
+	//printf("input is %s\n", input);
     if(strlen(input)<3)
     {
         //printf("not long enough");
@@ -167,6 +169,7 @@ int checkFormat(char* input)
     }
         
     substring(type, input, 0, 3);
+	//printf("type is %s\n", type);
     if(strcmp(type, "REG")!=0 && strcmp(type, "ERR")!=0)
     {
         //printf("does not start with reg/err");
@@ -203,10 +206,10 @@ int checkFormat(char* input)
                 else
                 {
                     int last = strlen(input);
-                    if(input[last-1]!='|' && !(input[last-3]=='|' && input[last-2]=='\r' && input[last-1]=='\n'))
+                    if(input[last-1]!='|' && input[last-3]!='|')
                     {
-                        printf("missing bar at the end.\n");
-                        printf("The length is %ld and the last character is %c", strlen(input), input[strlen(input)-1]);
+                        //printf("missing bar at the end.\n");
+                        //printf("The length is %ld and the last character is %c", strlen(input), input[strlen(input)-1]);
                         return 1;
                     }
                     else
@@ -217,7 +220,7 @@ int checkFormat(char* input)
             }
         }
     }
-    printf("error message input");
+   // printf("error message input");
     return -1;
 }
 
@@ -289,17 +292,20 @@ int checkValid(int sfd, char* input, int key)
             }
             char* err1 = {"ERR|M1FT|"};
             write(sfd, err1, strlen(err1));
+			printf("%s\n", err1);
             return 0;
         }
         if(!checkLen(input))
         {
             char* err1 = {"ERR|M1LN|"};
+			printf("%s\n", err1);
             write(sfd, err1, strlen(err1));
             return 0;
         }
         if(!checkContent(input, "Who's there?"))
         {
             char* err1 = {"ERR|M1CT|"};
+			printf("%s\n", err1);
             write(sfd, err1, strlen(err1));
             return 0;
         }
@@ -315,18 +321,21 @@ int checkValid(int sfd, char* input, int key)
                 return -1;
             }
             char* err3 = {"ERR|M3FT|"};
+			printf("%s\n", err3);
             write(sfd, err3, strlen(err3));
             return 0;
         }
         if(!checkLen(input))
         {
             char* err3 = {"ERR|M3LN|"};
+			printf("%s\n", err3);
             write(sfd, err3, strlen(err3));
             return 0;
         }
         if(!checkContent(input, "Incompetent interrupting cow, who?"))
         {
             char* err3 = {"ERR|M3CT|"};
+			printf("%s\n", err3);
             write(sfd, err3, strlen(err3));
             return 0;
         }
@@ -363,11 +372,15 @@ int checkValid(int sfd, char* input, int key)
 
 char* combine(Node* current, int count)
 {
-	char* total = malloc(BUFFSIZE*count + 2);
+	char* total = malloc(count + 6);
+	//printf("count is %d\n", count);
 	total[0] = '\0';
-    while(current!=NULL && current->data != NULL)
+	//printf("HEAD DATA is %s\n", current->data);
+	int i = 0;
+    while(current!=NULL)
     {
-		strcat(total, current->data);
+		total[i] = current->data;
+		i++;
         current = current->next;
     }
 	return total;
@@ -377,10 +390,10 @@ char* combine(Node* current, int count)
 int readIn(int fd, int key)
 {	
 	int bytes = BUFFSIZE;
-	char* buffHead = malloc(4);
+	char buffHead[5] = {0};
 	buffHead[BUFFSIZE] = '\0';
 	int count = 1;
-	Node head = {NULL, NULL};
+	Node head = {0, NULL};
 	int exitStatus = 0;
 	int barCount = 0;
 	int maxBarCount = 0;
@@ -390,10 +403,22 @@ int readIn(int fd, int key)
 	}
 	else
 	{	
-
 		bytes = read(fd, buffHead,3); //read in REG or ERR
 		buffHead[bytes] = '\0';
-
+		
+		buffHead[bytes] = '\0';
+		
+		if(bytes <= 0)
+		{
+			printf("client disconnect\n");
+			return 0;
+		}
+		
+		add(&head, buffHead[0]);
+		add(&head, buffHead[1]);
+		add(&head, buffHead[2]);
+		
+		
 		if(strcmp(buffHead, "REG") == 0)
 		{
 			maxBarCount = 3;
@@ -404,53 +429,54 @@ int readIn(int fd, int key)
 		}
 		else
 		{
-			char* error = malloc(5);
-			error[0] = 'M';
-			error[1] = key+'0';
-			error[2] = 'F';
-			error[3] = 'T';
-			error[4] = 0;
+			char* error = malloc(10);
+			strcpy(error, "ERR|M");
+			error[5] = key+'0';
+			error[6] = 0;
+			strcat(error, "FT|");
 			printf("%s\n", error);
 			write(fd, error, strlen(error));
 			free(error);
-			free(buffHead);
 			return 0;
 		}
 		while (barCount < maxBarCount && (bytes = read(fd, buffHead, BUFFSIZE)) > 0)
 		{
-			buffHead[bytes] = '\0';
-			add(&head, buffHead);
+			add(&head, buffHead[0]);
 			
 			if(buffHead[0] == '|')
 			{
 				barCount ++;
 			}
 			
-			
-			buffHead = malloc(BUFFSIZE+1);
+
 			count++;
 
 		}
+		if(bytes <= 0)
+		{
+			printf("client disconnect\n");
+			return 0;
+		}
 		
-		buffHead = combine(&head, count);
-		
-		exitStatus = checkValid(fd, buffHead, key);
-		printf("%s\n", buffHead); //print input
-		
+		char* temp = combine(&head, count);
+		exitStatus = checkValid(fd, temp, key);
+		if(exitStatus)
+		{
+			printf("%s\n", temp);
+		}
+		free(temp);
 	}
-
-
-	free(buffHead);
 	return exitStatus;
-
 }
+
 void* helper(void* input)
 {
-	int sfd = *(int*)input;
-	joke(sfd);
-	close(sfd);
+	int fd = *(int*)input;
+	joke(fd);
+	close(fd);
 	return NULL;
 }
+
 void joke(int sfd)
 {
 	int tempBool = 0;
