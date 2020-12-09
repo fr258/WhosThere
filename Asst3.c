@@ -18,13 +18,7 @@ typedef struct listNode
 	
 } Node;
 
-//returns a linked list iterator
-//head must not be null
-typedef struct
-{
-	Node* head;
-	
-} Iterator;
+
 
 void *helper(void* sfd);
 int server(char *port);
@@ -33,9 +27,7 @@ int checkValid(int fd, char* input, int key);
 int readIn(int fd, int key);
 char* combine(Node* current, int count);
 void add(Node* head, char* data);
-void deleteList(Node* head);
-int hasNext(Iterator* iter);
-Node* next(Iterator* iter);
+
 
 
 int main(int argc, char **argv)
@@ -133,42 +125,6 @@ int server(char *port)
 }
 
 
-
-//returns the next value in a linked list
-//iterator passed must not be null
-Node* next(Iterator* iter)
-{
-	if(iter->head != NULL)
-	{
-		Node* temp = iter->head; //save current head
-		iter->head = iter->head->next; //set head in iterator to next node
-		return temp; //return current head
-	}
-	return NULL;
-}
-
-//returns if at lesat one more node with data exists in list
-//iterator must not be null
-int hasNext(Iterator* iter)
-{
-	return (iter->head != NULL);
-}
-
-
-void deleteList(Node* head)
-{
-	Iterator iter = {head}, iter1 = {head};
-	while(hasNext(&iter))
-	{
-		free(next(&iter)->data);
-	}
-	next(&iter1);
-	while(hasNext(&iter1)) //free nodes
-	{
-		free(next(&iter1));
-	}
-}
-
 void add(Node* head, char* data)
 {
 	if(head->data != NULL) 
@@ -255,7 +211,6 @@ int checkFormat(char* input)
                     }
                     else
                     {
-                        printf("valid");
                         return 0;
                     }
                 }
@@ -323,7 +278,6 @@ int checkLen(char* input)
 
 int checkValid(int sfd, char* input, int key)
 {
-	//printf("entering checkValid\n");
     if(key==1)
     {
         if(checkFormat(input))
@@ -366,7 +320,7 @@ int checkValid(int sfd, char* input, int key)
         }
         if(!checkLen(input))
         {
-            char* err3 = {"ERR|M1LN|"};
+            char* err3 = {"ERR|M3LN|"};
             write(sfd, err3, sizeof(err3));
             return 0;
         }
@@ -392,13 +346,13 @@ int checkValid(int sfd, char* input, int key)
         }
         if(!checkLen(input))
         {
-            char* err5 = {"ERR|M1LN|"};
+            char* err5 = {"ERR|M5LN|"};
             write(sfd, err5, sizeof(err5));
             return 0;
         }
-        if(ispunct(input[strlen(input)-2]))
+        if(!ispunct(input[strlen(input)-2]))
         {
-            char* err5 = {"ERR|M1CT|"};
+            char* err5 = {"ERR|M5CT|"};
             write(sfd, err5, sizeof(err5));
             return 0;
         }
@@ -455,11 +409,12 @@ int readIn(int fd, int key)
 		buffHead = combine(&head, count);
 		
 		exitStatus = checkValid(fd, buffHead, key);
+		printf("%s\n", buffHead); //print input
 		
 	}
 
 
-	//free(buffHead);
+	free(buffHead);
 	return exitStatus;
 
 }
@@ -472,10 +427,13 @@ void* helper(void* input)
 }
 void joke(int sfd)
 {
+	int tempBool = 0;
 	char* kkj1 = {"REG|13|Knock, knock.|"};
 	write(sfd, kkj1, strlen(kkj1)); 
+	printf("%s\n", kkj1);
 
-	if(!readIn(sfd,1)) //who's there?
+	tempBool = readIn(sfd,1);
+	if(!tempBool && tempBool!=-1) //who's there?
 	{
 		return;
 	}
@@ -483,8 +441,10 @@ void joke(int sfd)
 	 //setup
 	char* kkj2 = {"REG|29|Incompetent interrupting cow.|"};
 	write(sfd, kkj2, strlen(kkj2));
+	printf("%s\n", kkj2);
 	
-	if(!readIn(sfd,3)) //setup, who?
+	tempBool = readIn(sfd,3);
+	if(!tempBool && tempBool!=-1) //setup, who?
 	{
 		return;
 	}
@@ -492,8 +452,10 @@ void joke(int sfd)
 	//punchline
 	char* kkj3 = {"REG|7|...Moo!|"};
 	write(sfd, kkj3, strlen(kkj3));
+	printf("%s\n", kkj3);
 	
-	if(!readIn(sfd,5)) //surprise/disgust
+	tempBool = readIn(sfd,5);
+	if(!tempBool && tempBool!=-1) //surprise/disgust
 	{
 		return;
 	}		
