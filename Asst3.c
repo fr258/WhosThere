@@ -8,7 +8,7 @@
 #include <pthread.h>
 
 #define BACKLOG 5
-#define BUFFSIZE 256
+#define BUFFSIZE 1
 
 // the argument we will pass to the connection-handler threads
 struct connection {
@@ -223,7 +223,6 @@ char* substring(char *out, const char *in, int startIndex, int length)
 
 int checkFormat(char* input)
 {
-	printf("entering checkFormat\n");
     char* type = malloc(4);
     if(strlen(input)<3)
     {
@@ -443,58 +442,47 @@ char* combine(Node* current, int count)
 //returns the same thing as checkValid
 int readIn(int fd, int key)
 {	
-	int bytes;
+	int bytes = BUFFSIZE;
 	char* buffHead = malloc(BUFFSIZE + 1);
 	buffHead[BUFFSIZE] = '\0';
-
-	if(fd<0) //invalid pathName passed
+	int count = 1;
+	Node head = {NULL, NULL};
+	int exitStatus = 0;
+	int barCount = 0;
+	if(fd<0) //something went wrong
 	{
 		printf("error\n");
 	}
 	else
 	{	
-		//sleep(5);
-		bytes =  read(fd, buffHead, BUFFSIZE);
-		//bytes =  read(fd, buffHead, BUFFSIZE);
-		buffHead[bytes] = '\0';
-		if(bytes == 0) //nothing read in
+		while (barCount < 3 && (bytes = read(fd, buffHead, BUFFSIZE)) > 0)
 		{
-			return EXIT_FAILURE;
-		}
-		buffHead[bytes] = '\0';
-
-		if(bytes >= BUFFSIZE)
-		{
-			int count = 1;
-			Node head = {NULL, NULL};
-			
+			buffHead[bytes] = '\0';
 			add(&head, buffHead);
 			
-			char* tempBuff = malloc(BUFFSIZE+1);
-			
-			bytes =  read(fd, tempBuff, BUFFSIZE);	
-			tempBuff[bytes] = '\0';
-			
-			while(bytes>0)
+			if(buffHead[0] == '|')
 			{
-				add(&head, tempBuff);
-				tempBuff = malloc(BUFFSIZE+1);
-				
-				bytes =  read(fd, tempBuff, BUFFSIZE);
-				tempBuff[bytes] = '\0';
-				
-				count++;
+				barCount ++;
 			}
-			//free(tempBuff);				
-			buffHead = combine(&head, count);
-			//deleteList(&head);
 			
-		}	
+			
+			buffHead = malloc(BUFFSIZE+1);
+			count++;
+
+
+			
+		}
+
+
+		buffHead = combine(&head, count);
+		
+		exitStatus = checkValid(fd, buffHead, key);
+		
 	}
-	int exitStatus = checkValid(fd, buffHead, key);
+
+
 	//free(buffHead);
 	return exitStatus;
-	return 0;
 
 }
 void *echo(void *arg)
