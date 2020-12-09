@@ -288,19 +288,19 @@ int checkValid(int sfd, char* input, int key)
                 return -1;
             }
             char* err1 = {"ERR|M1FT|"};
-            write(sfd, err1, sizeof(err1));
+            write(sfd, err1, strlen(err1));
             return 0;
         }
         if(!checkLen(input))
         {
             char* err1 = {"ERR|M1LN|"};
-            write(sfd, err1, sizeof(err1));
+            write(sfd, err1, strlen(err1));
             return 0;
         }
         if(!checkContent(input, "Who's there?"))
         {
             char* err1 = {"ERR|M1CT|"};
-            write(sfd, err1, sizeof(err1));
+            write(sfd, err1, strlen(err1));
             return 0;
         }
 
@@ -315,19 +315,19 @@ int checkValid(int sfd, char* input, int key)
                 return -1;
             }
             char* err3 = {"ERR|M3FT|"};
-            write(sfd, err3, sizeof(err3));
+            write(sfd, err3, strlen(err3));
             return 0;
         }
         if(!checkLen(input))
         {
             char* err3 = {"ERR|M3LN|"};
-            write(sfd, err3, sizeof(err3));
+            write(sfd, err3, strlen(err3));
             return 0;
         }
         if(!checkContent(input, "Incompetent interrupting cow, who?"))
         {
             char* err3 = {"ERR|M3CT|"};
-            write(sfd, err3, sizeof(err3));
+            write(sfd, err3, strlen(err3));
             return 0;
         }
     }
@@ -341,19 +341,19 @@ int checkValid(int sfd, char* input, int key)
                 return -1;
             }
             char* err5 = {"ERR|M5FT|"};
-            write(sfd, err5, sizeof(err5));
+            write(sfd, err5, strlen(err5));
             return 0;
         }
         if(!checkLen(input))
         {
             char* err5 = {"ERR|M5LN|"};
-            write(sfd, err5, sizeof(err5));
+            write(sfd, err5, strlen(err5));
             return 0;
         }
         if(!ispunct(input[strlen(input)-2]))
         {
             char* err5 = {"ERR|M5CT|"};
-            write(sfd, err5, sizeof(err5));
+            write(sfd, err5, strlen(err5));
             return 0;
         }
     }
@@ -377,19 +377,46 @@ char* combine(Node* current, int count)
 int readIn(int fd, int key)
 {	
 	int bytes = BUFFSIZE;
-	char* buffHead = malloc(BUFFSIZE + 1);
+	char* buffHead = malloc(4);
 	buffHead[BUFFSIZE] = '\0';
 	int count = 1;
 	Node head = {NULL, NULL};
 	int exitStatus = 0;
 	int barCount = 0;
+	int maxBarCount = 0;
 	if(fd<0) //something went wrong
 	{
 		printf("error\n");
 	}
 	else
 	{	
-		while (barCount < 3 && (bytes = read(fd, buffHead, BUFFSIZE)) > 0)
+
+		bytes = read(fd, buffHead,3); //read in REG or ERR
+		buffHead[bytes] = '\0';
+
+		if(strcmp(buffHead, "REG") == 0)
+		{
+			maxBarCount = 3;
+		}
+		else if(strcmp(buffHead, "ERR") == 0)
+		{
+			maxBarCount = 2;
+		}
+		else
+		{
+			char* error = malloc(5);
+			error[0] = 'M';
+			error[1] = key+'0';
+			error[2] = 'F';
+			error[3] = 'T';
+			error[4] = 0;
+			printf("%s\n", error);
+			write(fd, error, strlen(error));
+			free(error);
+			free(buffHead);
+			return 0;
+		}
+		while (barCount < maxBarCount && (bytes = read(fd, buffHead, BUFFSIZE)) > 0)
 		{
 			buffHead[bytes] = '\0';
 			add(&head, buffHead);
@@ -404,8 +431,7 @@ int readIn(int fd, int key)
 			count++;
 
 		}
-
-
+		
 		buffHead = combine(&head, count);
 		
 		exitStatus = checkValid(fd, buffHead, key);
@@ -433,7 +459,7 @@ void joke(int sfd)
 	printf("%s\n", kkj1);
 
 	tempBool = readIn(sfd,1);
-	if(!tempBool && tempBool!=-1) //who's there?
+	if(!tempBool || tempBool==-1) //who's there?
 	{
 		return;
 	}
@@ -444,7 +470,7 @@ void joke(int sfd)
 	printf("%s\n", kkj2);
 	
 	tempBool = readIn(sfd,3);
-	if(!tempBool && tempBool!=-1) //setup, who?
+	if(!tempBool || tempBool==-1) //setup, who?
 	{
 		return;
 	}
@@ -455,7 +481,7 @@ void joke(int sfd)
 	printf("%s\n", kkj3);
 	
 	tempBool = readIn(sfd,5);
-	if(!tempBool && tempBool!=-1) //surprise/disgust
+	if(!tempBool || tempBool==-1) //surprise/disgust
 	{
 		return;
 	}		
