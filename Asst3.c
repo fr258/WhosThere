@@ -144,6 +144,8 @@ void add(Node* head, char data)
     head->next = NULL;
 }
 
+//Simple substring method for extracting the length value or just the content from a message formatted REG|<num>|<content>|
+
 char* substring(char *out, const char *in, int startIndex, int length)
 {
 	//printf("entering substring\n");
@@ -158,6 +160,8 @@ char* substring(char *out, const char *in, int startIndex, int length)
     return out;
 }
 
+//This method checks the format of the message received. If it starts with ERR, then it will return -1. 
+//It returns 1 if improperly formatted and 0 if properly formatted (owing to the author's accidental inversion of C's assignment of 0 to false and 1 to true)
 int checkFormat(char* input)
 {
     char type[4];
@@ -224,6 +228,7 @@ int checkFormat(char* input)
     return -1;
 }
 
+//This method checks if the content of the message lines up with the expected values: "Who's there?", "<setup>, who?"
 int checkContent(char* input, char* correct)
 {
 	//printf("entering checkContent\n");
@@ -251,6 +256,7 @@ int checkContent(char* input, char* correct)
 
 }
 
+//This method checks if the length value given in the correctly formatted message matches the actual length of the content sent.
 int checkLen(char* input)
 {
 	//printf("entering checklen\n");
@@ -279,6 +285,11 @@ int checkLen(char* input)
     return length==count;
 }
 
+//This method checks for errors in received messages. First it checks format by calling checkFormat(); this method will return -1 if the message received was an error message from the client
+//If there is a format error, it will write the correct format error message to the socket.
+//If the message is correctly formatted, it will then check the length. The call to checkLen() assumes correct format.
+//Finally if length is correct we will check if content is correct. 
+//Returns 0 for errors in received message, 1 for no errors (valid message) and -1 if an error message was received.
 int checkValid(int sfd, char* input, int key)
 {
     if(key==1)
