@@ -8,16 +8,6 @@
 #include <pthread.h>
 
 #define BACKLOG 5
-#define BUFFSIZE 1
-
-
-typedef struct listNode
-{
-    char data;
-    struct listNode *next;
-	
-} Node;
-
 
 
 void *helper(void* sfd);
@@ -25,19 +15,22 @@ int server(char *port);
 void joke(int sfd);
 int checkValid(int fd, char* input, int key);
 int readIn(int fd, int key);
-char* combine(Node* current, int count);
-void add(Node* head, char data);
-
-
 
 int main(int argc, char **argv)
 {
 	if (argc != 2) {
-		printf("Usage: %s [port]\n", argv[0]);
+		printf("Error: wrong number of args\n");
 		exit(EXIT_FAILURE);
 	}
-
-    (void) server(argv[1]);
+	int port = atoi(argv[1]);
+	if(port>5000 && port<65536)
+	{
+		server(argv[1]);
+	}
+	else
+	{
+		printf("Invalid port number.\n");
+	}
     return EXIT_SUCCESS;
 }
 
@@ -50,7 +43,7 @@ int server(char *port)
 
     // initialize hints
     memset(&hint, 0, sizeof(struct addrinfo)); 
-    hint.ai_family = AF_UNSPEC; //family will be auto selected (?)
+    hint.ai_family = AF_UNSPEC; //family will be auto selected 
     hint.ai_socktype = SOCK_STREAM; //server is accepting input stream
     hint.ai_flags = AI_PASSIVE; //server is listening
 	
@@ -64,7 +57,7 @@ int server(char *port)
     for (addr = address_list; addr != NULL; addr = addr->ai_next) {
         sfd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
         
-        // if we couldn't create the socket, try the next method
+        // failed to create socket
         if (sfd == -1) {
             continue;
         }
@@ -85,7 +78,7 @@ int server(char *port)
     }
 
     if (addr == NULL) {
-        // we reached the end of result without successfuly binding a socket
+        // reached the end of result without successfuly binding a socket
         fprintf(stderr, "Could not bind\n");
         return -1;
     }
@@ -96,13 +89,12 @@ int server(char *port)
     printf("Waiting for connection\n");
     for (;;) {        
         // wait for an incoming connection
-		//printf("Waiting for connection\n");
         fd = accept(sfd, NULL, NULL);
         	// accept will block until a remote host tries to connect
         	// it returns a new socket that can be used to communicate with the remote
         	// host, and writes the address of the remote hist into the provided location
         
-        // if we got back -1, it means something went wrong
+        //something went wrong
         if (fd == -1) {
             perror("accept");
             continue;
@@ -111,7 +103,7 @@ int server(char *port)
 		// spin off a worker thread to handle the remote connection
         error = pthread_create(&tid, NULL, helper, &fd);
 
-		// if we couldn't spin off the thread, clean up and wait for another connection
+		// if couldn't spin off the thread, clean up and wait for another connection
         if (error != 0) {
             fprintf(stderr, "Unable to create thread: %d\n", error);
             close(fd);
@@ -125,26 +117,6 @@ int server(char *port)
     return 0;
 }
 
-
-void add(Node* head, char data)
-{
-	if(head->data != 0) 
-	{
-		while(head->next != NULL)
-		{
-			head = head->next;
-		}
-		
-		head->next = malloc(sizeof(Node));
-		head = head->next;
-		
-	}
-	
-	head->data = data;
-    head->next = NULL;
-}
-
-//Simple substring method for extracting the length value or just the content from a message formatted REG|<num>|<content>|
 
 char* substring(char *out, const char *in, int startIndex, int length)
 {
@@ -292,6 +264,7 @@ int checkLen(char* input)
 //Returns 0 for errors in received message, 1 for no errors (valid message) and -1 if an error message was received.
 int checkValid(int sfd, char* input, int key)
 {
+	printf("%s\n", input);
     if(key==1)
     {
         if(checkFormat(input))
@@ -361,18 +334,21 @@ int checkValid(int sfd, char* input, int key)
                 return -1;
             }
             char* err5 = {"ERR|M5FT|"};
+			printf("%s\n", err5);
             write(sfd, err5, strlen(err5));
             return 0;
         }
         if(!checkLen(input))
         {
             char* err5 = {"ERR|M5LN|"};
+			printf("%s\n", err5);
             write(sfd, err5, strlen(err5));
             return 0;
         }
         if(!ispunct(input[strlen(input)-2]))
         {
             char* err5 = {"ERR|M5CT|"};
+			printf("%s\n", err5);
             write(sfd, err5, strlen(err5));
             return 0;
         }
@@ -381,33 +357,14 @@ int checkValid(int sfd, char* input, int key)
 	return 1;
 }
 
-char* combine(Node* current, int count)
-{
-	char* total = malloc(count + 6);
-	//printf("count is %d\n", count);
-	total[0] = '\0';
-	//printf("HEAD DATA is %s\n", current->data);
-	int i = 0;
-    while(current!=NULL)
-    {
-		total[i] = current->data;
-		i++;
-        current = current->next;
-    }
-	return total;
-}
-
-//returns the same thing as checkValid
+//attempts to read in the message, and sends it to checkValid for error detection
 int readIn(int fd, int key)
 {	
-	int bytes = BUFFSIZE;
-	char buffHead[5] = {0};
-	buffHead[BUFFSIZE] = '\0';
-	int count = 1;
-	Node head = {0, NULL};
+	int bytes = 1;
+	char buffHead[50] = {0};
+	buffHead[1] = '\0';
+	int count = 0;
 	int exitStatus = 0;
-	int barCount = 0;
-	int maxBarCount = 0;
 	if(fd<0) //something went wrong
 	{
 		printf("error\n");
@@ -415,67 +372,130 @@ int readIn(int fd, int key)
 	else
 	{	
 		bytes = read(fd, buffHead,3); //read in REG or ERR
-		buffHead[bytes] = '\0';
-		
-		buffHead[bytes] = '\0';
+		char* currPos = buffHead + 3;
 		
 		if(bytes <= 0)
 		{
 			printf("client disconnect\n");
 			return 0;
 		}
-		
-		add(&head, buffHead[0]);
-		add(&head, buffHead[1]);
-		add(&head, buffHead[2]);
-		
 		
 		if(strcmp(buffHead, "REG") == 0)
 		{
-			maxBarCount = 3;
+			char num[100] = {0}; //will store read-in message length
+			int length = 0; //will store read-in message length
+			
+			//--------------------------------------------------------------------
+			//READ IN FIRST BAR
+			//--------------------------------------------------------------------
+			bytes = read(fd, currPos, 1); //attempt to read in first bar	
+			if(bytes <= 0)
+			{
+				printf("client disconnect\n");
+				return 0;
+			}
+			
+			if(*currPos != '|') //message is garbage
+			{
+				char* temp = buffHead;
+				return checkValid(fd, temp, key);
+			}
+			//--------------------------------------------------------------------
+			//READ IN NUMBER
+			//--------------------------------------------------------------------
+			currPos++; //set current position to after first bar
+			for(int i = 0; (bytes = read(fd, currPos, 1)) > 0 && isdigit(*currPos); i++) //read in number
+			{
+				num[i] = *currPos; //store number
+				currPos++; //read into next free byte	
+			}
+			//--------------------------------------------------------------------
+			//READ IN SECOND BAR
+			//--------------------------------------------------------------------	
+			if(bytes <= 0)
+			{
+				printf("client disconnect\n");
+				return 0;
+			}
+			else if(*currPos=='|') //number and second bar are as expected
+			{
+				char* temp = num;
+				length = atoi(temp);
+				currPos++; //set current position to after second bar
+			}
+			else
+			{
+				char* temp = buffHead;
+				return checkValid(fd, temp, key);
+			}
+			//--------------------------------------------------------------------
+			//READ IN MESSAGE
+			//--------------------------------------------------------------------
+			while ((count<length) && ((bytes = read(fd, currPos, 1)) > 0) && (*currPos != '|')) 
+			{	
+				currPos++;
+				count++;
+			}
+			if(count == length) //read full length in without bar in it
+			{
+				bytes = read(fd, currPos, 1);
+			}
 		}
 		else if(strcmp(buffHead, "ERR") == 0)
 		{
-			maxBarCount = 2;
-		}
-		else
-		{
-			char* error = malloc(10);
-			strcpy(error, "ERR|M");
-			error[5] = key+'0';
-			error[6] = 0;
-			strcat(error, "FT|");
-			printf("%s\n", error);
-			write(fd, error, strlen(error));
-			free(error);
-			return 0;
-		}
-		while (barCount < maxBarCount && (bytes = read(fd, buffHead, BUFFSIZE)) > 0)
-		{
-			add(&head, buffHead[0]);
-			
-			if(buffHead[0] == '|')
+			//--------------------------------------------------------------------
+			//READ IN FIRST BAR
+			//--------------------------------------------------------------------
+			bytes = read(fd, currPos, 1); //attempt to read in first bar	
+			if(bytes <= 0)
 			{
-				barCount ++;
+				printf("client disconnect\n");
+				return 0;
+			}	
+			if(*currPos != '|') //message is garbage
+			{
+				char temp[] = "ERR|M0FT|";
+				temp[5] = '0'+key;
+				printf("%s\n", temp);
+				write(fd, temp, strlen(temp));
+			}
+			currPos++;
+			//--------------------------------------------------------------------
+			//READ IN MESSAGE
+			//--------------------------------------------------------------------
+			while ((count<4) && ((bytes = read(fd, currPos, 1)) > 0) && (*currPos != '|')) 
+			{
+				currPos++;
+				count++;
+			}
+			if(count == 4) //read full length in without bar in it
+			{
+				bytes = read(fd, currPos, 1);
+			}
+			if(*currPos != '|') //message is garbage
+			{
+				char temp[] = "ERR|M0FT|";
+				temp[5] = '0'+key;
+				printf("%s\n", temp);
+				write(fd, temp, strlen(temp));
 			}
 			
-
-			count++;
-
 		}
+		else //garbage
+		{
+			char* temp = buffHead;
+			return checkValid(fd, temp, key);
+		}
+		
 		if(bytes <= 0)
 		{
 			printf("client disconnect\n");
 			return 0;
 		}
 		
-		char* temp = combine(&head, count);
-		exitStatus = checkValid(fd, temp, key);
-		if(exitStatus)
-		{
-			printf("%s\n", temp);
-		}
-		free(temp);
+		char* temp = buffHead;
+		exitStatus = checkValid(fd, temp, key); //check for errors
+
 	}
 	return exitStatus;
 }
