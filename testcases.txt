@@ -1,0 +1,19 @@
+Asst3 test cases
+
+"REG|12|Who's there??" //sends error message M<n>FT. This catches messages with no bar but correct length and even punctuation at the end.
+
+"ERRajsdkfljdsfksd" //sends error message M<n>FT. Not everything that starts with ERR is a valid error message.
+
+"ERR|M0CT" //sends error message M<n>FT. Not a properly formatted error message, so it is not a correctly formatted message at all.
+
+"REGsdfsdfjk" //sends error message M<n>FT. Improper format, and the read does not fail despite not reaching 3 bars.
+
+"REG|jsdfklsdj" //sends error message M<n>FT. Improper format, and the read does not fail despite not reaching 3 bars.
+
+"dsfdfds" //naturally, sends error message M<n>FT.
+
+"f" //as one would expect, a format error.
+
+"REG|4|abc|" //sends error message M<n>LN. Incorrect length value.
+
+"REG|12|Who's thare?" //sends error message M<n>CT. Length and format are correct, but this is not the correct content we expect.
