@@ -456,8 +456,10 @@ int readIn(int fd, int key)
 			{
 				char temp[] = "ERR|M0FT|";
 				temp[5] = '0'+key;
+				printf("%s\n", buffHead);
 				printf("%s\n", temp);
 				write(fd, temp, strlen(temp));
+				return 0;
 			}
 			currPos++;
 			//--------------------------------------------------------------------
@@ -476,8 +478,10 @@ int readIn(int fd, int key)
 			{
 				char temp[] = "ERR|M0FT|";
 				temp[5] = '0'+key;
+				printf("%s\n", buffHead);
 				printf("%s\n", temp);
 				write(fd, temp, strlen(temp));
+				return 0;
 			}
 			
 		}
